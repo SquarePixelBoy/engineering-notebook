@@ -2,7 +2,7 @@ import { describe, test, expect } from "bun:test";
 import { parseSession, type ParsedSession } from "./parser";
 import { join } from "path";
 
-const fixturePath = join(import.meta.dir, "../tests/fixtures/sample-session.jsonl");
+const fixturePath = join(import.meta.dir, "../tests/fixtures/test-session-1.jsonl");
 
 describe("parseSession", () => {
   test("extracts session metadata", () => {
@@ -48,10 +48,10 @@ describe("parseSession", () => {
     const session = parseSession(fixturePath);
     const md = session.toMarkdown();
     expect(md).toContain("# Session: myapp");
-    expect(md).toContain("**User (17:37):** Fix the login bug");
-    expect(md).toContain("**Claude (17:37):** I'll investigate the login flow.");
-    expect(md).toContain("**Claude (17:38):** Found the bug.");
-    expect(md).toContain("**User (17:39):** Great, fix it please");
+    expect(md).toContain("**User (2026-02-02 17:37):** Fix the login bug");
+    expect(md).toContain("**Claude (2026-02-02 17:37):** I'll investigate the login flow.");
+    expect(md).toContain("**Claude (2026-02-02 17:38):** Found the bug.");
+    expect(md).toContain("**User (2026-02-02 17:39):** Great, fix it please");
     expect(md).not.toContain("thinking");
     expect(md).not.toContain("tool_use");
     expect(md).not.toContain("tool_result");

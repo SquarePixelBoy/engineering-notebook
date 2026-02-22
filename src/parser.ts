@@ -1,4 +1,5 @@
 import { readFileSync } from "fs";
+import { basename } from "path";
 
 export type MessageRole = "user" | "assistant";
 
@@ -10,6 +11,7 @@ export type ParsedMessage = {
 
 export type ParsedSession = {
   sessionId: string;
+  parentSessionId: string | null;
   projectPath: string;
   projectName: string;
   gitBranch: string | null;
@@ -34,6 +36,7 @@ type RawRecord = {
   };
   timestamp?: string;
   uuid?: string;
+  isCompactSummary?: boolean;
 };
 
 type ContentBlock = {
@@ -90,7 +93,11 @@ export function parseSession(filePath: string): ParsedSession {
   const raw = readFileSync(filePath, "utf-8");
   const lines = raw.trim().split("\n").filter(Boolean);
 
-  let sessionId = "";
+  // The file's own session ID is in the filename
+  const fileSessionId = basename(filePath, ".jsonl");
+
+  let firstRecordSessionId: string | null = null;
+  let parentSessionId: string | null = null;
   let projectPath = "";
   let gitBranch: string | null = null;
   let version: string | null = null;
@@ -106,14 +113,31 @@ export function parseSession(filePath: string): ParsedSession {
       continue; // skip malformed lines
     }
 
-    // Track timestamps for session duration
+    // Track the first sessionId we see to detect continuations
+    if (record.sessionId && !firstRecordSessionId) {
+      firstRecordSessionId = record.sessionId;
+      if (firstRecordSessionId !== fileSessionId) {
+        parentSessionId = firstRecordSessionId;
+      }
+    }
+
+    // For continuation files, skip prefix records from the parent session
+    if (parentSessionId && record.sessionId === parentSessionId) {
+      continue;
+    }
+
+    // Skip synthetic compact summary messages
+    if (record.isCompactSummary) {
+      continue;
+    }
+
+    // Track timestamps only for this session's own records
     if (record.timestamp) {
       if (!firstTimestamp) firstTimestamp = record.timestamp;
       lastTimestamp = record.timestamp;
     }
 
-    // Extract metadata from first available record
-    if (record.sessionId && !sessionId) sessionId = record.sessionId;
+    // Extract metadata from this session's own records
     if (record.cwd && !projectPath) projectPath = record.cwd;
     if (record.gitBranch && !gitBranch) gitBranch = record.gitBranch;
     if (record.version && !version) version = record.version;
@@ -140,7 +164,8 @@ export function parseSession(filePath: string): ParsedSession {
   const projectName = projectNameFromPath(projectPath);
 
   return {
-    sessionId,
+    sessionId: fileSessionId,
+    parentSessionId,
     projectPath,
     projectName,
     gitBranch,
@@ -160,7 +185,7 @@ export function parseSession(filePath: string): ParsedSession {
       md += ` | **Project:** ${projectPath}\n\n---\n\n`;
 
       for (const msg of messages) {
-        const time = formatTime(msg.timestamp);
+        const time = msg.timestamp.slice(0, 16).replace("T", " ");
         const speaker = msg.role === "user" ? "User" : "Claude";
         const firstLine = msg.text.split("\n")[0];
         const truncated = msg.text.includes("\n")

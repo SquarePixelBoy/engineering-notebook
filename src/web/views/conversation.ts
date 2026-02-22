@@ -2,14 +2,14 @@
  * Shared module for rendering conversation markdown into styled chat messages.
  *
  * The stored conversation format looks like:
- *   **User (17:37):** Fix the login bug [...]
- *   **Claude (17:37):** Let me investigate this...
+ *   **User (2026-02-21 17:37):** Fix the login bug [...]
+ *   **Claude (2026-02-21 17:37):** Let me investigate this...
  *
  * This module parses those lines and renders them as visually distinct message blocks.
  */
 
 const MESSAGE_REGEX =
-  /^\*\*(User|Claude|Jesse|Assistant|Human)\s*\((\d{2}:\d{2})\):\*\*\s*(.+)$/;
+  /^\*\*(User|Claude|Jesse|Assistant|Human)\s*\((?:\d{4}-\d{2}-\d{2}\s+)?(\d{2}:\d{2})\):\*\*\s*(.+)$/;
 
 type ParsedMessage = {
   speaker: string;
