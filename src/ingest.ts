@@ -1,0 +1,146 @@
+import { readdirSync, statSync } from "fs";
+import { join } from "path";
+import { Database } from "bun:sqlite";
+import { parseSession } from "./parser";
+
+/** Scan source directories for .jsonl session files, applying exclude patterns */
+export function scanSources(
+  sources: string[],
+  exclude: string[]
+): string[] {
+  const files: string[] = [];
+
+  for (const source of sources) {
+    let entries: string[];
+    try {
+      entries = readdirSync(source);
+    } catch {
+      continue;
+    }
+
+    for (const projectDir of entries) {
+      const excluded = exclude.some((pattern) => {
+        const regex = new RegExp(
+          "^" + pattern.replace(/\*/g, ".*").replace(/\?/g, ".") + "$"
+        );
+        return regex.test(projectDir);
+      });
+      if (excluded) continue;
+
+      const projectPath = join(source, projectDir);
+      let stat;
+      try {
+        stat = statSync(projectPath);
+      } catch {
+        continue;
+      }
+      if (!stat.isDirectory()) continue;
+
+      let projectFiles: string[];
+      try {
+        projectFiles = readdirSync(projectPath);
+      } catch {
+        continue;
+      }
+
+      for (const file of projectFiles) {
+        if (file.endsWith(".jsonl")) {
+          files.push(join(projectPath, file));
+        }
+      }
+    }
+  }
+
+  return files;
+}
+
+function deriveProjectId(projectPath: string): string {
+  const parts = projectPath.split("/").filter(Boolean);
+  return parts[parts.length - 1] || "unknown";
+}
+
+/** Ingest session files into the database */
+export function ingestSessions(
+  files: string[],
+  db: Database,
+  force = false
+): { ingested: number; skipped: number; errors: string[] } {
+  let ingested = 0;
+  let skipped = 0;
+  const errors: string[] = [];
+
+  const checkStmt = db.query("SELECT id FROM sessions WHERE source_path = ?");
+  const insertProject = db.prepare(`
+    INSERT INTO projects (id, path, display_name, session_count)
+    VALUES (?, ?, ?, 0)
+    ON CONFLICT(id) DO UPDATE SET
+      session_count = session_count + 1,
+      last_session_at = CASE
+        WHEN excluded.path != '' THEN datetime('now')
+        ELSE last_session_at
+      END
+  `);
+  const insertSession = db.prepare(`
+    INSERT INTO sessions (id, project_id, project_path, source_path, started_at, ended_at, git_branch, version, message_count, ingested_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+  `);
+  const insertConvo = db.prepare(`
+    INSERT INTO conversations (session_id, conversation_markdown, extracted_at)
+    VALUES (?, ?, datetime('now'))
+  `);
+
+  for (const file of files) {
+    if (!force) {
+      const existing = checkStmt.get(file);
+      if (existing) {
+        skipped++;
+        continue;
+      }
+    }
+
+    try {
+      const session = parseSession(file);
+
+      if (session.messageCount === 0) {
+        skipped++;
+        continue;
+      }
+
+      const projectId = deriveProjectId(session.projectPath);
+
+      db.transaction(() => {
+        insertProject.run(
+          projectId,
+          session.projectPath,
+          session.projectName
+        );
+        insertSession.run(
+          session.sessionId,
+          projectId,
+          session.projectPath,
+          file,
+          session.startedAt,
+          session.endedAt,
+          session.gitBranch,
+          session.version,
+          session.messageCount
+        );
+        insertConvo.run(session.sessionId, session.toMarkdown());
+      })();
+
+      ingested++;
+    } catch (err) {
+      errors.push(`${file}: ${err}`);
+    }
+  }
+
+  // Update project aggregate fields
+  db.exec(`
+    UPDATE projects SET
+      first_session_at = (SELECT MIN(started_at) FROM sessions WHERE sessions.project_id = projects.id),
+      last_session_at = (SELECT MAX(started_at) FROM sessions WHERE sessions.project_id = projects.id),
+      session_count = (SELECT COUNT(*) FROM sessions WHERE sessions.project_id = projects.id)
+  `);
+
+  return { ingested, skipped, errors };
+}
