@@ -1,5 +1,7 @@
 import { Database } from "bun:sqlite";
 
+const SUMMARIZE_MODEL = "claude-sonnet-4-5-20250514";
+
 export type SessionGroup = {
   date: string;
   projectId: string;
@@ -123,28 +125,28 @@ export function parseSummaryResponse(response: string): SummaryResult {
   const summaryMatch = response.match(
     /SUMMARY:\s*\n([\s\S]*?)(?=\nTOPICS:)/
   );
-  const topicsMatch = response.match(
-    /TOPICS:\s*\n(\[[\s\S]*?\])/
+  const topicsSection = response.match(
+    /TOPICS:\s*\n([\s\S]*?)(?=\nCOMMITS:|$)/
   );
-  const commitsMatch = response.match(
-    /COMMITS:\s*\n(\[[\s\S]*?\])/
+  const commitsSection = response.match(
+    /COMMITS:\s*\n([\s\S]*?)$/
   );
 
   const summary = summaryMatch ? summaryMatch[1].trim() : response.trim();
 
   let topics: string[] = [];
-  if (topicsMatch) {
+  if (topicsSection) {
     try {
-      topics = JSON.parse(topicsMatch[1]);
+      topics = JSON.parse(topicsSection[1].trim());
     } catch {
       topics = [];
     }
   }
 
   let commits: string[] = [];
-  if (commitsMatch) {
+  if (commitsSection) {
     try {
-      commits = JSON.parse(commitsMatch[1]);
+      commits = JSON.parse(commitsSection[1].trim());
     } catch {
       commits = [];
     }
@@ -166,7 +168,7 @@ export async function summarizeGroup(
   const result = query({
     prompt,
     options: {
-      model: "claude-sonnet-4-5-20250514",
+      model: SUMMARIZE_MODEL,
       maxTurns: 1,
       tools: [],
       permissionMode: "default",
@@ -182,6 +184,10 @@ export async function summarizeGroup(
         }
       }
     }
+  }
+
+  if (!responseText.trim()) {
+    throw new Error("Empty response from LLM");
   }
 
   const parsed = parseSummaryResponse(responseText);
@@ -204,7 +210,7 @@ export async function summarizeGroup(
     parsed.summary,
     JSON.stringify(parsed.topics),
     JSON.stringify(parsed.commits),
-    "claude-sonnet-4-5-20250514"
+    SUMMARIZE_MODEL
   );
 }
 
