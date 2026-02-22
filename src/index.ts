@@ -34,9 +34,29 @@ switch (command) {
     closeDb();
     break;
   }
-  case "summarize":
-    console.log("TODO: summarize");
+  case "summarize": {
+    const config = loadConfig();
+    const db = initDb(config.db_path);
+
+    const dateIdx = process.argv.indexOf("--date");
+    const filterDate = dateIdx !== -1 ? process.argv[dateIdx + 1] : undefined;
+    const projectIdx = process.argv.indexOf("--project");
+    const filterProject = projectIdx !== -1 ? process.argv[projectIdx + 1] : undefined;
+
+    const { summarizeAll } = await import("./summarize");
+    const result = await summarizeAll(db, filterDate, filterProject, (done, total, group) => {
+      console.log(`[${done + 1}/${total}] Summarizing ${group.projectName} (${group.date})...`);
+    });
+
+    console.log(`Summarized: ${result.summarized}, Errors: ${result.errors.length}`);
+    if (result.errors.length > 0) {
+      for (const err of result.errors) {
+        console.error(`  ${err}`);
+      }
+    }
+    closeDb();
     break;
+  }
   case "serve":
     console.log("TODO: serve");
     break;
