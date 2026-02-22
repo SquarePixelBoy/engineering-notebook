@@ -55,11 +55,6 @@ export function scanSources(
   return files;
 }
 
-function deriveProjectId(projectPath: string): string {
-  const parts = projectPath.split("/").filter(Boolean);
-  return parts[parts.length - 1] || "unknown";
-}
-
 /** Ingest session files into the database */
 export function ingestSessions(
   files: string[],
@@ -104,7 +99,7 @@ export function ingestSessions(
         continue;
       }
 
-      const projectId = deriveProjectId(session.projectPath);
+      const projectId = session.projectName;
 
       db.transaction(() => {
         if (force) {

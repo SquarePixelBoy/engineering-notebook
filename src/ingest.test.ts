@@ -4,7 +4,7 @@ import { initDb, closeDb } from "./db";
 import { mkdtempSync, rmSync, mkdirSync, writeFileSync, copyFileSync } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
-import { Database } from "bun:sqlite";
+
 
 describe("scanSources", () => {
   let tempDir: string;
@@ -44,7 +44,7 @@ describe("scanSources", () => {
 
 describe("ingestSessions", () => {
   let tempDir: string;
-  let db: Database;
+  let db: ReturnType<typeof initDb>;
 
   beforeEach(() => {
     tempDir = mkdtempSync(join(tmpdir(), "notebook-ingest-test-"));
