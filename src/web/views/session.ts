@@ -1,4 +1,5 @@
 import { Database } from "bun:sqlite";
+import { renderConversation } from "./conversation";
 
 type SessionRow = {
   id: string;
@@ -38,7 +39,7 @@ export function renderSession(db: Database, sessionId: string): string {
   html += `<br>Source: <code>${escapeHtml(session.source_path)}</code>`;
   html += `</div>`;
 
-  html += `<div class="conversation">${escapeHtml(session.conversation_markdown)}</div>`;
+  html += renderConversation(session.conversation_markdown);
 
   return html;
 }

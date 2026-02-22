@@ -91,12 +91,22 @@ export function renderLayout(title: string, content: string): string {
       padding: 1rem;
       background: var(--bg);
       border-radius: 4px;
-      font-family: 'SF Mono', 'Fira Code', monospace;
-      font-size: 0.85rem;
-      white-space: pre-wrap;
       max-height: 600px;
       overflow-y: auto;
     }
+    .msg { padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 0.5rem; }
+    .msg-user { background: rgba(79, 195, 247, 0.08); border-left: 3px solid var(--user); }
+    .msg-claude { background: rgba(129, 199, 132, 0.08); border-left: 3px solid var(--claude); }
+    .msg-header { display: flex; gap: 0.5rem; align-items: baseline; margin-bottom: 0.25rem; }
+    .msg-speaker { font-weight: 600; font-size: 0.85rem; }
+    .msg-user .msg-speaker { color: var(--user); }
+    .msg-claude .msg-speaker { color: var(--claude); }
+    .msg-time { color: var(--text-muted); font-size: 0.75rem; }
+    .msg-body { color: var(--text); line-height: 1.6; }
+    .session-link { color: var(--accent); text-decoration: none; font-size: 0.85rem; }
+    .session-link:hover { text-decoration: underline; }
+    .session-item { display: flex; gap: 1rem; align-items: baseline; padding: 0.3rem 0; }
+    .session-meta { color: var(--text-muted); font-size: 0.8rem; }
     .pagination {
       display: flex;
       justify-content: center;

@@ -5,6 +5,7 @@ import { renderJournal } from "./views/journal";
 import { renderProjects } from "./views/projects";
 import { renderSearch, renderSearchResults } from "./views/search";
 import { renderSession } from "./views/session";
+import { renderConversation } from "./views/conversation";
 
 export function createApp(db: Database): Hono {
   const app = new Hono();
@@ -68,15 +69,11 @@ export function createApp(db: Database): Hono {
 
     let html = "";
     for (const convo of convos) {
-      html += `<div class="conversation">${escapeHtml(convo.conversation_markdown)}</div>`;
+      html += renderConversation(convo.conversation_markdown);
     }
 
     return c.html(html);
   });
 
   return app;
-}
-
-function escapeHtml(str: string): string {
-  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
