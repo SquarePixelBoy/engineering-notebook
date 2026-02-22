@@ -88,7 +88,7 @@ function extractAssistantText(content: string | ContentBlock[]): string | null {
 
 export function parseSession(filePath: string): ParsedSession {
   const raw = readFileSync(filePath, "utf-8");
-  const lines = raw.trim().split("\n");
+  const lines = raw.trim().split("\n").filter(Boolean);
 
   let sessionId = "";
   let projectPath = "";
@@ -99,7 +99,12 @@ export function parseSession(filePath: string): ParsedSession {
   const messages: ParsedMessage[] = [];
 
   for (const line of lines) {
-    const record: RawRecord = JSON.parse(line);
+    let record: RawRecord;
+    try {
+      record = JSON.parse(line);
+    } catch {
+      continue; // skip malformed lines
+    }
 
     // Track timestamps for session duration
     if (record.timestamp) {
