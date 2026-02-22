@@ -7,6 +7,7 @@ export type Config = {
   exclude: string[];
   db_path: string;
   port: number;
+  day_start_hour: number;
 };
 
 export function defaultConfig(): Config {
@@ -16,6 +17,7 @@ export function defaultConfig(): Config {
     exclude: ["-private-tmp*", "*-skill-test-*"],
     db_path: join(configDir, "notebook.db"),
     port: 3000,
+    day_start_hour: 5,
   };
 }
 

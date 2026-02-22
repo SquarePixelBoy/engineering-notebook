@@ -35,6 +35,7 @@ describe("config", () => {
       exclude: ["test-*"],
       db_path: join(tempDir, "test.db"),
       port: 4000,
+      day_start_hour: 5,
     };
     saveConfig(configPath, config);
     const loaded = loadConfig(configPath);
