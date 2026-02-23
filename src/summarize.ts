@@ -211,6 +211,9 @@ TOPICS: ["caching optimization", "Redis (abandoned)", "SQLite materialized views
 OPEN_QUESTIONS: ["Run load test on materialized view refresh under write-heavy workload"]
 
 Now write an entry for ${group.date}, project "${group.projectName}".
+
+IMPORTANT: Some transcripts may be truncated or contain "[...]" placeholders where content was cut. Work with whatever is available — write the best summary you can from the visible content. Never refuse or ask for more data. If you can only see fragments, summarize those fragments.
+
 Format your response EXACTLY as:
 
 HEADLINE: <one line, what happened today on this project>
