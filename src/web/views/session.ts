@@ -1,6 +1,6 @@
 import { Database } from "bun:sqlite";
 import { renderConversation } from "./conversation";
-import { escapeHtml, formatTimeAmPm, formatTime } from "./helpers";
+import { escapeHtml } from "./helpers";
 
 /**
  * Render a single session's conversation for Panel 3,

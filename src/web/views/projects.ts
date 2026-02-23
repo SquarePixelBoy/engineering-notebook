@@ -1,5 +1,5 @@
 import { Database } from "bun:sqlite";
-import { escapeHtml, formatDateShort, formatTimeAmPm, formatTime, groupByTimeBucket } from "./helpers";
+import { escapeHtml, formatDateShort, groupByTimeBucket } from "./helpers";
 
 type ProjectRow = {
   id: string;
