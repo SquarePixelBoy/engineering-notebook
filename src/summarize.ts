@@ -214,7 +214,11 @@ Now write an entry for ${group.date}, project "${group.projectName}".
 
 IMPORTANT: Some transcripts may be truncated or contain "[...]" placeholders where content was cut. Work with whatever is available — write the best summary you can from the visible content. Never refuse or ask for more data. If you can only see fragments, summarize those fragments.
 
-Format your response EXACTLY as:
+If the transcripts show NO substantive engineering work — for example, automated test runs, single-shot bot queries, CI/CD routing decisions, or trivial one-line interchanges with no problem-solving — respond with ONLY:
+
+SKIP: <brief reason why this isn't journal-worthy>
+
+Otherwise, format your response EXACTLY as:
 
 HEADLINE: <one line, what happened today on this project>
 SUMMARY: <one paragraph, 2-5 sentences — wins, failures, and dropped threads>
@@ -226,15 +230,18 @@ Here are the session transcripts:
 ${conversationText}`;
 }
 
-type SummaryResult = {
-  headline: string;
-  summary: string;
-  topics: string[];
-  openQuestions: string[];
-};
+type SummaryResult =
+  | { skipped: true; skipReason: string }
+  | { skipped: false; headline: string; summary: string; topics: string[]; openQuestions: string[] };
 
 /** Parse the LLM response into structured fields */
 export function parseSummaryResponse(response: string): SummaryResult {
+  const trimmed = response.trim();
+  const skipMatch = trimmed.match(/^SKIP:\s*(.+)/);
+  if (skipMatch) {
+    return { skipped: true, skipReason: skipMatch[1].trim() };
+  }
+
   const headlineMatch = response.match(
     /HEADLINE:\s*(.*?)(?:\n|$)/
   );
@@ -269,14 +276,14 @@ export function parseSummaryResponse(response: string): SummaryResult {
     }
   }
 
-  return { headline, summary, topics, openQuestions };
+  return { skipped: false, headline, summary, topics, openQuestions };
 }
 
 /** Run LLM summarization using Claude Agent SDK */
 export async function summarizeGroup(
   group: SessionGroup,
   db: Database
-): Promise<void> {
+): Promise<{ skipped: boolean; skipReason?: string }> {
   const { query } = await import("@anthropic-ai/claude-agent-sdk");
   const prompt = buildSummaryPrompt(group);
 
@@ -315,6 +322,10 @@ export async function summarizeGroup(
 
   const parsed = parseSummaryResponse(responseText);
 
+  if (parsed.skipped) {
+    return { skipped: true, skipReason: parsed.skipReason };
+  }
+
   db.prepare(
     `
     INSERT INTO journal_entries (date, project_id, session_ids, headline, summary, topics, open_questions, generated_at, model_used)
@@ -337,6 +348,8 @@ export async function summarizeGroup(
     JSON.stringify(parsed.openQuestions),
     SUMMARIZE_MODEL
   );
+
+  return { skipped: false };
 }
 
 /** Summarize all unsummarized groups */
@@ -346,20 +359,27 @@ export async function summarizeAll(
   filterProject?: string,
   onProgress?: (done: number, total: number, group: SessionGroup) => void,
   dayStartHour: number = 5
-): Promise<{ summarized: number; errors: string[] }> {
+): Promise<{ summarized: number; skipped: number; skipReasons: string[]; errors: string[] }> {
   const groups = groupSessionsByDateAndProject(db, filterDate, filterProject, dayStartHour);
   let summarized = 0;
+  let skipped = 0;
+  const skipReasons: string[] = [];
   const errors: string[] = [];
 
   for (const group of groups) {
     try {
-      onProgress?.(summarized, groups.length, group);
-      await summarizeGroup(group, db);
-      summarized++;
+      onProgress?.(summarized + skipped, groups.length, group);
+      const result = await summarizeGroup(group, db);
+      if (result.skipped) {
+        skipped++;
+        if (result.skipReason) skipReasons.push(result.skipReason);
+      } else {
+        summarized++;
+      }
     } catch (err) {
       errors.push(`${group.date}/${group.projectId}: ${err}`);
     }
   }
 
-  return { summarized, errors };
+  return { summarized, skipped, skipReasons, errors };
 }

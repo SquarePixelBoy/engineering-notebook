@@ -58,13 +58,16 @@ SUMMARY: Spent the morning building the onboarding wizard. After lunch, fixed a 
 TOPICS: ["onboarding flow", "OAuth token bug", "production hotfix"]
 OPEN_QUESTIONS: ["Need to add email verification step to onboarding", "Should we add rate limiting to the OAuth refresh endpoint?"]`;
     const result = parseSummaryResponse(response);
-    expect(result.headline).toBe("Shipped onboarding flow and fixed auth bug");
-    expect(result.summary).toContain("onboarding wizard");
-    expect(result.topics).toEqual(["onboarding flow", "OAuth token bug", "production hotfix"]);
-    expect(result.openQuestions).toEqual([
-      "Need to add email verification step to onboarding",
-      "Should we add rate limiting to the OAuth refresh endpoint?",
-    ]);
+    expect(result.skipped).toBe(false);
+    if (!result.skipped) {
+      expect(result.headline).toBe("Shipped onboarding flow and fixed auth bug");
+      expect(result.summary).toContain("onboarding wizard");
+      expect(result.topics).toEqual(["onboarding flow", "OAuth token bug", "production hotfix"]);
+      expect(result.openQuestions).toEqual([
+        "Need to add email verification step to onboarding",
+        "Should we add rate limiting to the OAuth refresh endpoint?",
+      ]);
+    }
   });
 
   test("parseSummaryResponse handles missing open questions", () => {
@@ -72,8 +75,50 @@ OPEN_QUESTIONS: ["Need to add email verification step to onboarding", "Should we
 SUMMARY: Fixed a typo.
 TOPICS: ["bugfix"]`;
     const result = parseSummaryResponse(response);
-    expect(result.topics).toEqual(["bugfix"]);
-    expect(result.openQuestions).toEqual([]);
+    expect(result.skipped).toBe(false);
+    if (!result.skipped) {
+      expect(result.topics).toEqual(["bugfix"]);
+      expect(result.openQuestions).toEqual([]);
+    }
+  });
+
+  test("parseSummaryResponse detects SKIP response", () => {
+    const response = `SKIP: Automated test run with no substantive engineering discussion`;
+    const result = parseSummaryResponse(response);
+    expect(result.skipped).toBe(true);
+    if (result.skipped) {
+      expect(result.skipReason).toBe("Automated test run with no substantive engineering discussion");
+    }
+  });
+
+  test("parseSummaryResponse handles SKIP with extra whitespace", () => {
+    const response = `SKIP:   Single-shot bot query   `;
+    const result = parseSummaryResponse(response);
+    expect(result.skipped).toBe(true);
+    if (result.skipped) {
+      expect(result.skipReason).toBe("Single-shot bot query");
+    }
+  });
+
+  test("parseSummaryResponse does not treat SKIP in body as skip", () => {
+    const response = `HEADLINE: Discussed whether to skip the cache layer
+SUMMARY: Talked about skipping the cache.
+TOPICS: ["caching"]
+OPEN_QUESTIONS: []`;
+    const result = parseSummaryResponse(response);
+    expect(result.skipped).toBe(false);
+  });
+
+  test("parseSummaryResponse returns skipped:false for normal response", () => {
+    const response = `HEADLINE: Shipped feature
+SUMMARY: Built and shipped the feature.
+TOPICS: ["feature"]
+OPEN_QUESTIONS: []`;
+    const result = parseSummaryResponse(response);
+    expect(result.skipped).toBe(false);
+    if (!result.skipped) {
+      expect(result.headline).toBe("Shipped feature");
+    }
   });
 });
 

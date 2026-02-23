@@ -58,7 +58,12 @@ switch (command) {
       console.log(`[${done + 1}/${total}] Summarizing ${group.projectName} (${group.date})...`);
     }, config.day_start_hour);
 
-    console.log(`Summarized: ${result.summarized}, Errors: ${result.errors.length}`);
+    console.log(`Summarized: ${result.summarized}, Skipped: ${result.skipped}, Errors: ${result.errors.length}`);
+    if (result.skipped > 0) {
+      for (const reason of result.skipReasons) {
+        console.log(`  \u2298 ${reason}`);
+      }
+    }
     if (result.errors.length > 0) {
       for (const err of result.errors.slice(0, 10)) {
         console.error(`  ${err}`);
