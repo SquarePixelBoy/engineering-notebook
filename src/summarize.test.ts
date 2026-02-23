@@ -52,14 +52,28 @@ describe("summarize", () => {
     expect(prompt).toContain("engineering journal entry");
   });
 
-  test("parseSummaryResponse extracts headline, summary, and topics", () => {
+  test("parseSummaryResponse extracts headline, summary, topics, and open questions", () => {
     const response = `HEADLINE: Shipped onboarding flow and fixed auth bug
 SUMMARY: Spent the morning building the onboarding wizard. After lunch, fixed a production OAuth token expiry issue caused by clock skew.
-TOPICS: ["onboarding flow", "OAuth token bug", "production hotfix"]`;
+TOPICS: ["onboarding flow", "OAuth token bug", "production hotfix"]
+OPEN_QUESTIONS: ["Need to add email verification step to onboarding", "Should we add rate limiting to the OAuth refresh endpoint?"]`;
     const result = parseSummaryResponse(response);
     expect(result.headline).toBe("Shipped onboarding flow and fixed auth bug");
     expect(result.summary).toContain("onboarding wizard");
     expect(result.topics).toEqual(["onboarding flow", "OAuth token bug", "production hotfix"]);
+    expect(result.openQuestions).toEqual([
+      "Need to add email verification step to onboarding",
+      "Should we add rate limiting to the OAuth refresh endpoint?",
+    ]);
+  });
+
+  test("parseSummaryResponse handles missing open questions", () => {
+    const response = `HEADLINE: Quick fix
+SUMMARY: Fixed a typo.
+TOPICS: ["bugfix"]`;
+    const result = parseSummaryResponse(response);
+    expect(result.topics).toEqual(["bugfix"]);
+    expect(result.openQuestions).toEqual([]);
   });
 });
 

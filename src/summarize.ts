@@ -202,11 +202,13 @@ EXAMPLE 1:
 HEADLINE: Shipped user onboarding flow and fixed production auth bug
 SUMMARY: Spent the morning building out the new user onboarding wizard — got the multi-step form working with proper validation and hooked it up to the API. Shipped it to staging by lunch. After that, got pulled into a production issue where OAuth tokens were silently expiring for Google SSO users. Tracked it down to a clock skew problem in token validation, patched it, and deployed the fix. Still need to circle back to adding the email verification step to onboarding — ran out of time.
 TOPICS: ["onboarding flow", "OAuth token bug", "production hotfix", "email verification (dropped)"]
+OPEN_QUESTIONS: ["Add email verification step to onboarding", "Monitor OAuth token refresh error rates after fix"]
 
 EXAMPLE 2:
 HEADLINE: Explored caching strategies, abandoned Redis approach
 SUMMARY: Started the day trying to add Redis caching to speed up the dashboard queries. Got it working locally but realized the invalidation logic would be a nightmare with our event-sourced data model. Pivoted to a simpler approach using SQLite materialized views that refresh on write. The dashboard loads are 10x faster now without the operational complexity. Also helped debug a teammate's CI failure that turned out to be a flaky test.
 TOPICS: ["caching optimization", "Redis (abandoned)", "SQLite materialized views", "CI debugging"]
+OPEN_QUESTIONS: ["Run load test on materialized view refresh under write-heavy workload"]
 
 Now write an entry for ${group.date}, project "${group.projectName}".
 Format your response EXACTLY as:
@@ -214,6 +216,7 @@ Format your response EXACTLY as:
 HEADLINE: <one line, what happened today on this project>
 SUMMARY: <one paragraph, 2-5 sentences — wins, failures, and dropped threads>
 TOPICS: <JSON array of 3-8 short topic phrases>
+OPEN_QUESTIONS: <JSON array of 0-5 short phrases — unresolved issues, deferred decisions, dropped threads, open questions. Empty array [] if nothing was left unresolved.>
 
 Here are the session transcripts:
 
@@ -224,6 +227,7 @@ type SummaryResult = {
   headline: string;
   summary: string;
   topics: string[];
+  openQuestions: string[];
 };
 
 /** Parse the LLM response into structured fields */
@@ -235,7 +239,10 @@ export function parseSummaryResponse(response: string): SummaryResult {
     /SUMMARY:\s*([\s\S]*?)(?=\nTOPICS:)/
   );
   const topicsSection = response.match(
-    /TOPICS:\s*([\s\S]*?)$/
+    /TOPICS:\s*([\s\S]*?)(?=\nOPEN_QUESTIONS:|$)/
+  );
+  const openQuestionsSection = response.match(
+    /OPEN_QUESTIONS:\s*([\s\S]*?)$/
   );
 
   const headline = headlineMatch ? headlineMatch[1].trim() : "";
@@ -250,7 +257,16 @@ export function parseSummaryResponse(response: string): SummaryResult {
     }
   }
 
-  return { headline, summary, topics };
+  let openQuestions: string[] = [];
+  if (openQuestionsSection) {
+    try {
+      openQuestions = JSON.parse(openQuestionsSection[1].trim());
+    } catch {
+      openQuestions = [];
+    }
+  }
+
+  return { headline, summary, topics, openQuestions };
 }
 
 /** Run LLM summarization using Claude Agent SDK */
@@ -298,12 +314,13 @@ export async function summarizeGroup(
 
   db.prepare(
     `
-    INSERT INTO journal_entries (date, project_id, session_ids, headline, summary, topics, generated_at, model_used)
-    VALUES (?, ?, ?, ?, ?, ?, datetime('now'), ?)
+    INSERT INTO journal_entries (date, project_id, session_ids, headline, summary, topics, open_questions, generated_at, model_used)
+    VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), ?)
     ON CONFLICT(date, project_id) DO UPDATE SET
       headline = excluded.headline,
       summary = excluded.summary,
       topics = excluded.topics,
+      open_questions = excluded.open_questions,
       generated_at = excluded.generated_at,
       session_ids = excluded.session_ids
   `
@@ -314,6 +331,7 @@ export async function summarizeGroup(
     parsed.headline,
     parsed.summary,
     JSON.stringify(parsed.topics),
+    JSON.stringify(parsed.openQuestions),
     SUMMARIZE_MODEL
   );
 }
