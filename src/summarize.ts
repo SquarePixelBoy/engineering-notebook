@@ -87,14 +87,13 @@ export function groupSessionsByDateAndProject(
   // We filter out already-summarized (project, date) combos in TypeScript
   // after splitting by logical date, because a single session can now span
   // multiple dates.
-  const conditions: string[] = [];
+  const conditions: string[] = ["s.is_subagent = 0"];
   const params: string[] = [];
   if (filterProject) {
     conditions.push("s.project_id = ?");
     params.push(filterProject);
   }
-  const whereClause =
-    conditions.length > 0 ? "WHERE " + conditions.join(" AND ") : "";
+  const whereClause = "WHERE " + conditions.join(" AND ");
 
   const rows = db
     .query(

@@ -66,6 +66,11 @@ export function initDb(dbPath: string): Database {
   } catch {
     // Column already exists — ignore
   }
+  try {
+    db.exec(`ALTER TABLE sessions ADD COLUMN is_subagent INTEGER NOT NULL DEFAULT 0`);
+  } catch {
+    // Column already exists — ignore
+  }
 
   _db = db;
   return db;

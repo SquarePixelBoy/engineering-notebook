@@ -73,8 +73,8 @@ export function ingestSessions(
     ON CONFLICT(id) DO UPDATE SET path = excluded.path
   `);
   const insertSession = db.prepare(`
-    INSERT INTO sessions (id, parent_session_id, project_id, project_path, source_path, started_at, ended_at, git_branch, version, message_count, ingested_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+    INSERT INTO sessions (id, parent_session_id, project_id, project_path, source_path, started_at, ended_at, git_branch, version, message_count, is_subagent, ingested_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
   `);
   const insertConvo = db.prepare(`
     INSERT INTO conversations (session_id, conversation_markdown, extracted_at)
@@ -121,6 +121,7 @@ export function ingestSessions(
           session.projectPath,
           session.projectName
         );
+        const isSubagent = file.includes("/subagents/") ? 1 : 0;
         insertSession.run(
           session.sessionId,
           session.parentSessionId,
@@ -131,7 +132,8 @@ export function ingestSessions(
           session.endedAt,
           session.gitBranch,
           session.version,
-          session.messageCount
+          session.messageCount,
+          isSubagent
         );
         insertConvo.run(session.sessionId, session.toMarkdown());
       })();
