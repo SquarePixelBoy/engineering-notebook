@@ -4,11 +4,13 @@ import { renderLayout } from "./views/layout";
 import { renderJournalPage, renderJournalEntries, renderEntryConversations, renderJournalDateIndex } from "./views/journal";
 import { renderProjectsPage, renderProjectTimeline, renderProjectIndex } from "./views/projects";
 import { renderSearch, renderSearchResults } from "./views/search";
-import { renderSettings } from "./views/settings";
+import { renderSettings, renderRemoteSourceCard, renderSyncStatus } from "./views/settings";
 import { renderSessionDetail } from "./views/session";
-import { loadConfig, saveConfig, resolveConfigPath } from "../config";
+import { escapeHtml } from "./views/helpers";
+import { loadConfig, saveConfig, resolveConfigPath, type RemoteSource } from "../config";
+import type { SyncManager } from "../sync";
 
-export function createApp(db: Database): Hono {
+export function createApp(db: Database, syncManager: SyncManager): Hono {
   const app = new Hono();
 
   // ──────────────────────────────────────────
@@ -28,11 +30,38 @@ export function createApp(db: Database): Hono {
     }));
   });
 
-  // Projects
+  // Projects — path-based routes (new, canonical)
+  app.get("/projects/:project/:entry", (c) => {
+    const config = loadConfig();
+    const projectId = c.req.param("project");
+    const entryId = parseInt(c.req.param("entry"));
+    const { panel1, panel2, panel3 } = renderProjectsPage(db, projectId, isNaN(entryId) ? undefined : entryId, config.exclude, config.day_start_hour);
+    return c.html(renderLayout("Projects — Engineering Notebook", {
+      activeTab: "projects",
+      panel1,
+      panel2,
+      panel3,
+    }));
+  });
+
+  app.get("/projects/:project", (c) => {
+    const config = loadConfig();
+    const projectId = c.req.param("project");
+    const { panel1, panel2, panel3 } = renderProjectsPage(db, projectId, undefined, config.exclude, config.day_start_hour);
+    return c.html(renderLayout("Projects — Engineering Notebook", {
+      activeTab: "projects",
+      panel1,
+      panel2,
+      panel3,
+    }));
+  });
+
+  // Projects — query-param routes (kept for backwards compatibility)
   app.get("/projects", (c) => {
+    const config = loadConfig();
     const projectId = c.req.query("project") || undefined;
     const entryId = c.req.query("entry") ? parseInt(c.req.query("entry")!) : undefined;
-    const { panel1, panel2, panel3 } = renderProjectsPage(db, projectId, entryId);
+    const { panel1, panel2, panel3 } = renderProjectsPage(db, projectId, entryId, config.exclude, config.day_start_hour);
     return c.html(renderLayout("Projects — Engineering Notebook", {
       activeTab: "projects",
       panel1,
@@ -87,7 +116,28 @@ export function createApp(db: Database): Hono {
     const port = parseInt((body.port as string) || "3000", 10);
     config.port = isNaN(port) ? 3000 : Math.max(1, Math.min(65535, port));
 
+    // Parse remote sources — indices may be non-sequential (timestamp-based from HTMX adds)
+    const remoteSources: RemoteSource[] = [];
+    const remoteIndices = Object.keys(body)
+      .filter((k) => k.startsWith("remote_name_"))
+      .map((k) => k.replace("remote_name_", ""));
+    for (const idx of remoteIndices) {
+      const name = body[`remote_name_${idx}`] as string;
+      if (!name) continue;
+      remoteSources.push({
+        name,
+        host: (body[`remote_host_${idx}`] as string) || "",
+        path: (body[`remote_path_${idx}`] as string) || "~/.claude/projects",
+        enabled: body[`remote_enabled_${idx}`] === "on",
+      });
+    }
+    config.remote_sources = remoteSources;
+
+    const autoSync = parseInt((body.auto_sync_interval as string) || "60", 10);
+    config.auto_sync_interval = isNaN(autoSync) ? 60 : Math.max(0, autoSync);
+
     saveConfig(configPath, config);
+    syncManager.updateConfig(config);
     return c.redirect("/settings");
   });
 
@@ -112,15 +162,92 @@ export function createApp(db: Database): Hono {
 
   // Projects: load timeline for a project (Panel 2)
   app.get("/api/projects/timeline", (c) => {
+    const config = loadConfig();
     const projectId = c.req.query("project");
     if (!projectId) return c.text("Missing project", 400);
-    return c.html(renderProjectTimeline(db, projectId));
+    return c.html(renderProjectTimeline(db, projectId, undefined, config.day_start_hour));
   });
 
-  // Legacy route compatibility: /project/:id redirects to /projects?project=:id
+  // Legacy route compatibility: /project/:id redirects to /projects/:id
   app.get("/project/:id", (c) => {
     const projectId = c.req.param("id");
-    return c.redirect(`/projects?project=${encodeURIComponent(projectId)}`);
+    return c.redirect(`/projects/${encodeURIComponent(projectId)}`);
+  });
+
+  // Projects: on-demand summarize a single project+date
+  app.get("/api/projects/summarize", async (c) => {
+    const projectId = c.req.query("project");
+    const date = c.req.query("date");
+    if (!projectId || !date) return c.text("Missing project or date", 400);
+
+    try {
+      const entryId = await syncManager.summarizeGroup(projectId, date);
+      if (entryId) {
+        // Fetch the newly created entry and render it as a card
+        const entry = db.query(`
+          SELECT id, date, headline, summary, topics, session_ids, open_questions
+          FROM journal_entries WHERE id = ?
+        `).get(entryId) as { id: number; date: string; headline: string; summary: string; topics: string; session_ids: string; open_questions: string } | null;
+        if (entry) {
+          const { renderEntryCard } = await import("./views/projects");
+          return c.html(renderEntryCard(entry, projectId, false));
+        }
+      }
+      // Skipped or no groups — show a muted card
+      return c.html(`<div class="entry-card" style="opacity: 0.5;">
+        <div class="entry-label">${date}</div>
+        <div class="entry-summary" style="color: var(--text-ghost); font-style: italic;">No journal-worthy sessions on this date.</div>
+      </div>`);
+    } catch (err) {
+      return c.html(`<div class="entry-card" style="opacity: 0.5;">
+        <div class="entry-label">${date}</div>
+        <div class="entry-summary" style="color: #b91c1c; font-style: italic;">Summary failed: ${escapeHtml(String(err))}</div>
+      </div>`);
+    }
+  });
+
+  // Sync: trigger sync+ingest
+  app.post("/api/sync", (c) => {
+    syncManager.runSync();
+    return c.html(renderSyncStatus(syncManager.getStatus()));
+  });
+
+  // Summarize: trigger bulk summarization
+  app.post("/api/summarize", (c) => {
+    syncManager.runSummarize();
+    return c.html(renderSyncStatus(syncManager.getStatus()));
+  });
+
+  // Sync: get current status
+  app.get("/api/sync/status", (c) => {
+    return c.html(renderSyncStatus(syncManager.getStatus()));
+  });
+
+  // Remote sources: new card fragment
+  app.get("/api/settings/remote-source-card", (c) => {
+    const index = parseInt(c.req.query("index") || "0", 10);
+    // Count existing cards by finding the next available index
+    // The client doesn't send the count, so we use a JS-assigned index via htmx
+    // For simplicity, use a timestamp-based index to avoid collisions
+    const idx = index || Date.now();
+    return c.html(renderRemoteSourceCard(idx));
+  });
+
+  // Remote sources: test SSH connection
+  app.post("/api/settings/test-connection", async (c) => {
+    const body = await c.req.parseBody();
+    // hx-include sends the field by its indexed name, so find any remote_host_* field
+    const host = Object.entries(body)
+      .find(([k]) => k.startsWith("remote_host_"))?.[1] as string || "";
+    if (!host) {
+      return c.html(`<span class="connection-error">No host specified</span>`);
+    }
+    const { testConnection } = await import("../sync");
+    const error = await testConnection(host);
+    if (error) {
+      return c.html(`<span class="connection-error">${escapeHtml(error)}</span>`);
+    }
+    return c.html(`<span class="connection-ok">Connected</span>`);
   });
 
   return app;

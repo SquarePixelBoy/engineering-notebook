@@ -18,6 +18,23 @@ switch (command) {
       sources.push(expandPath(process.argv[sourceIdx + 1]));
     }
 
+    // Sync remote sources
+    const remoteSources = config.remote_sources?.filter((s) => s.enabled) || [];
+    if (remoteSources.length > 0) {
+      const { syncAllRemoteSources } = await import("./sync");
+      console.log(`Syncing ${remoteSources.length} remote source(s)...`);
+      const syncResult = await syncAllRemoteSources(remoteSources, (r) => {
+        if (r.success) console.log(`  \u2713 ${r.name}`);
+        else console.log(`  \u2717 ${r.name}: ${r.error}`);
+      });
+      sources.push(...syncResult.cachedPaths);
+      if (syncResult.errors.length > 0) {
+        console.log(
+          `Sync errors: ${syncResult.errors.length} (continuing with local sources)`
+        );
+      }
+    }
+
     console.log(`Scanning ${sources.length} source(s)...`);
     const files = scanSources(sources, config.exclude);
     console.log(`Found ${files.length} session file(s)`);
@@ -75,8 +92,11 @@ switch (command) {
   case "serve": {
     const config = loadConfig();
     const db = initDb(config.db_path);
+    const { SyncManager } = await import("./sync");
+    const syncManager = new SyncManager(config, db);
     const { createApp } = await import("./web/server");
-    const app = createApp(db);
+    const app = createApp(db, syncManager);
+    syncManager.startTimer();
 
     const port = (() => {
       const portIdx = process.argv.indexOf("--port");

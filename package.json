@@ -1,8 +1,14 @@
 {
   "name": "engineering-notebook",
+  "version": "0.1.0",
+  "description": "CLI tool that ingests Claude Code sessions, generates LLM summaries, and serves a browsable engineering journal",
   "module": "src/index.ts",
   "type": "module",
-  "private": true,
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/prime-radiant-inc/engineering-notebook.git"
+  },
   "bin": {
     "notebook": "src/index.ts"
   },

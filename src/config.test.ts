@@ -37,6 +37,8 @@ describe("config", () => {
       port: 4000,
       day_start_hour: 5,
       summary_instructions: "",
+      remote_sources: [],
+      auto_sync_interval: 60,
     };
     saveConfig(configPath, config);
     const loaded = loadConfig(configPath);

@@ -2,6 +2,13 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync } from "fs";
 import { dirname, join } from "path";
 import { homedir } from "os";
 
+export type RemoteSource = {
+  name: string;
+  host: string;
+  path: string;
+  enabled: boolean;
+};
+
 export type Config = {
   sources: string[];
   exclude: string[];
@@ -9,6 +16,8 @@ export type Config = {
   port: number;
   day_start_hour: number;
   summary_instructions: string;
+  remote_sources: RemoteSource[];
+  auto_sync_interval: number;
 };
 
 export function defaultConfig(): Config {
@@ -20,6 +29,8 @@ export function defaultConfig(): Config {
     port: 3000,
     day_start_hour: 5,
     summary_instructions: "",
+    remote_sources: [],
+    auto_sync_interval: 60,
   };
 }
 

@@ -423,6 +423,103 @@ export function renderLayout(title: string, content: LayoutContent): string {
       font-family: var(--font-sans);
     }
     .settings-btn:hover { opacity: 0.85; }
+    .settings-btn-secondary {
+      padding: 6px 14px;
+      background: var(--surface);
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      font-size: 12px;
+      cursor: pointer;
+      font-family: var(--font-sans);
+    }
+    .settings-btn-secondary:hover { border-color: var(--text-ghost); color: var(--text); }
+    .settings-btn-danger {
+      padding: 6px 14px;
+      background: none;
+      color: var(--text-ghost);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      font-size: 12px;
+      cursor: pointer;
+      font-family: var(--font-sans);
+    }
+    .settings-btn-danger:hover { border-color: #b91c1c; color: #b91c1c; }
+
+    /* Remote source cards */
+    .remote-source-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 14px;
+      margin-bottom: 10px;
+    }
+    .remote-source-fields {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .remote-source-field { display: flex; flex-direction: column; gap: 4px; }
+    .remote-source-field-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-faint);
+    }
+    .remote-source-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 12px;
+    }
+    .remote-source-toggle {
+      font-size: 12px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+    }
+    .connection-status { font-size: 12px; }
+    .connection-ok { color: #16a34a; }
+    .connection-error { color: #b91c1c; font-size: 11px; }
+
+    /* Sync status */
+    .sync-status-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px 14px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .sync-status-spinner {
+      color: var(--text-faint);
+      font-style: italic;
+    }
+    .sync-results {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 6px;
+    }
+    .sync-result-ok { color: #16a34a; }
+    .sync-result-error { color: #b91c1c; }
+    .sync-stats {
+      font-size: 12px;
+      color: var(--text-faint);
+      margin-top: 4px;
+    }
+    .sync-stats:first-child { margin-top: 0; }
+    .entry-card-pending {
+      opacity: 0.6;
+      cursor: default;
+    }
+    @keyframes pulse-fade {
+      0%, 100% { opacity: 0.6; }
+      50% { opacity: 0.3; }
+    }
+    .entry-card-pending { animation: pulse-fade 2s ease-in-out infinite; }
 
     /* Misc */
     .page-title {
