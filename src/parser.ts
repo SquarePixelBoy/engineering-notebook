@@ -95,9 +95,22 @@ function formatDate(timestamp: string): string {
   return timestamp.slice(0, 10);
 }
 
+/** Clean up command-message XML tags from slash command messages.
+ *  e.g. "<command-message>brainstorm</command-message>\n<command-args>fix the bug</command-args>"
+ *  becomes "/brainstorm fix the bug" */
+function cleanCommandTags(text: string): string {
+  if (!text.includes("<command-message>")) return text;
+  const cmdMatch = text.match(/<command-message>([^<]*)<\/command-message>/);
+  if (!cmdMatch) return text;
+  const commandName = cmdMatch[1]!;
+  const argsMatch = text.match(/<command-args>([\s\S]*?)<\/command-args>/);
+  const args = argsMatch?.[1]?.trim() || "";
+  return args ? `/${commandName} ${args}` : `/${commandName}`;
+}
+
 function extractUserText(content: string | ContentBlock[]): string | null {
   if (typeof content === "string") {
-    return content;
+    return cleanCommandTags(content);
   }
   // Skip messages that contain tool_result blocks
   const hasToolResult = content.some((b) => b.type === "tool_result");
@@ -106,7 +119,7 @@ function extractUserText(content: string | ContentBlock[]): string | null {
   }
   const texts = content
     .filter((b) => b.type === "text" && b.text)
-    .map((b) => b.text!);
+    .map((b) => cleanCommandTags(b.text!));
   return texts.length > 0 ? texts.join("\n") : null;
 }
 

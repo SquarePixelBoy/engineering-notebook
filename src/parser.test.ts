@@ -5,6 +5,7 @@ import { join } from "path";
 const fixturePath = join(import.meta.dir, "../tests/fixtures/test-session-1.jsonl");
 const codexFixturePath = join(import.meta.dir, "../tests/fixtures/test-codex-session-1.jsonl");
 const subagentFixturePath = join(import.meta.dir, "../tests/fixtures/parent-session-id/subagents/agent-aba4e4e.jsonl");
+const commandFixturePath = join(import.meta.dir, "../tests/fixtures/test-command-messages.jsonl");
 
 describe("parseSession", () => {
   test("extracts session metadata", () => {
@@ -116,5 +117,13 @@ describe("parseSession", () => {
     const session = parseSession(subagentFixturePath);
     expect(session.startedAt).toBeTruthy();
     expect(session.endedAt).toBeTruthy();
+  });
+
+  test("cleans command-message tags from user messages", () => {
+    const session = parseSession(commandFixturePath);
+    const userMessages = session.messages.filter((m) => m.role === "user");
+    expect(userMessages.length).toBe(2);
+    expect(userMessages[0]!.text).toBe("/brainstorm fix the login bug");
+    expect(userMessages[1]!.text).toBe("/commit");
   });
 });

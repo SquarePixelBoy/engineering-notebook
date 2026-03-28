@@ -239,8 +239,11 @@ export function groupSessionsByDateAndProject(
 }
 
 /** Build the prompt for LLM summarization */
-export function buildSummaryPrompt(group: SessionGroup): string {
+export function buildSummaryPrompt(group: SessionGroup, summaryInstructions?: string): string {
   const conversationText = group.conversations.join("\n\n---\n\n");
+  const customInstructions = summaryInstructions?.trim()
+    ? `\n\nAdditional instructions from the user:\n${summaryInstructions.trim()}\n`
+    : "";
   return `You are writing an engineering journal entry. The reader uses Claude Code heavily across many projects and needs a quick way to remember what they worked on each day.
 
 Focus on: what problems were being solved, what got shipped, what broke, and any threads that got dropped. Write from the developer's first-person perspective. Keep it high-level — business value and outcomes, not implementation details.
@@ -278,7 +281,7 @@ OPEN_QUESTIONS: <JSON array of 0-5 short phrases — unresolved issues, deferred
 
 Here are the session transcripts:
 
-${conversationText}`;
+${conversationText}${customInstructions}`;
 }
 
 export type SummaryResult =
@@ -384,10 +387,11 @@ export function upsertJournalEntry(
 /** Run LLM summarization using Claude Agent SDK */
 export async function summarizeGroup(
   group: SessionGroup,
-  db: Database
+  db: Database,
+  summaryInstructions?: string
 ): Promise<{ skipped: boolean; skipReason?: string }> {
   const { query } = await import("@anthropic-ai/claude-agent-sdk");
-  const prompt = buildSummaryPrompt(group);
+  const prompt = buildSummaryPrompt(group, summaryInstructions);
 
   let responseText = "";
 
@@ -434,7 +438,8 @@ export async function summarizeAll(
   filterDate?: string,
   filterProject?: string,
   onProgress?: (done: number, total: number, group: SessionGroup) => void,
-  dayStartHour: number = 5
+  dayStartHour: number = 5,
+  summaryInstructions?: string
 ): Promise<{ summarized: number; skipped: number; skipReasons: string[]; errors: string[] }> {
   const groups = groupSessionsByDateAndProject(db, filterDate, filterProject, dayStartHour);
   let summarized = 0;
@@ -453,7 +458,7 @@ export async function summarizeAll(
   for (const group of groups) {
     try {
       onProgress?.(summarized + skipped, groups.length, group);
-      const result = await summarizeGroup(group, db);
+      const result = await summarizeGroup(group, db, summaryInstructions);
       if (result.skipped) {
         skipped++;
         if (result.skipReason) skipReasons.push(result.skipReason);

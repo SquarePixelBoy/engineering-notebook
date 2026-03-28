@@ -47,7 +47,9 @@ export function renderSessionDetail(db: Database, sessionId: string): string {
   html += `<div style="font-size: 11px; color: var(--text-ghost); margin-top: 2px;">`;
   html += `${session.started_at.slice(0, 10)} · ${session.message_count} messages`;
   if (session.git_branch) html += ` · ${escapeHtml(session.git_branch)}`;
-  html += `</div></div>`;
+  html += `</div>`;
+  html += `<div style="font-size: 11px; color: var(--text-ghost); margin-top: 2px; font-family: monospace;">${escapeHtml(session.id)}</div>`;
+  html += `</div>`;
 
   if (session.conversation_markdown) {
     html += renderConversation(
