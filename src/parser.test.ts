@@ -104,12 +104,12 @@ describe("parseSession", () => {
     const session = parseSession(subagentFixturePath);
     // Should have 3 messages: 1 user + 2 assistant text messages
     expect(session.messages.length).toBe(3);
-    expect(session.messages[0].role).toBe("user");
-    expect(session.messages[0].text).toBe("Refactor the auth module");
-    expect(session.messages[1].role).toBe("assistant");
-    expect(session.messages[1].text).toBe("I'll refactor the auth module now.");
-    expect(session.messages[2].role).toBe("assistant");
-    expect(session.messages[2].text).toBe("Done refactoring the auth module.");
+    expect(session.messages[0]!.role).toBe("user");
+    expect(session.messages[0]!.text).toBe("Refactor the auth module");
+    expect(session.messages[1]!.role).toBe("assistant");
+    expect(session.messages[1]!.text).toBe("I'll refactor the auth module now.");
+    expect(session.messages[2]!.role).toBe("assistant");
+    expect(session.messages[2]!.text).toBe("Done refactoring the auth module.");
   });
 
   test("subagent file preserves timestamps", () => {
