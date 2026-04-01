@@ -308,11 +308,7 @@ export function parseSession(filePath: string): ParsedSession {
       for (const msg of messages) {
         const time = msg.timestamp.slice(0, 16).replace("T", " ");
         const speaker = msg.role === "user" ? userDisplayName : assistantDisplayName;
-        const firstLine = msg.text.split("\n")[0];
-        const truncated = msg.text.includes("\n")
-          ? firstLine + " [...]"
-          : firstLine;
-        md += `**${speaker} (${time}):** ${truncated}\n`;
+        md += `**${speaker} (${time}):** ${msg.text}\n`;
       }
 
       return md;

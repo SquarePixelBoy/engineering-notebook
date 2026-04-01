@@ -67,10 +67,31 @@ export function renderLayout(title: string, content: LayoutContent): string {
       --text-muted: #57534e;
       --text-faint: #78716c;
       --text-ghost: #a8a29e;
+      --msg-user-color: #292524;
+      --msg-claude-color: #57534e;
+      --headline-color: #1c1917;
       --font-serif: Georgia, 'Times New Roman', serif;
       --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
     }
+    [data-theme="cursor"] {
+      --bg: #181818;
+      --surface: #252525;
+      --border: #2B2B2B;
+      --border-subtle: #252525;
+      --text: #CCCCCC;
+      --text-secondary: #CCCCCC;
+      --text-muted: #9D9D9D;
+      --text-faint: #868686;
+      --text-ghost: #616161;
+      --msg-user-color: #B8B8B8;
+      --msg-claude-color: #BABABA;
+      --headline-color: #B8B8B8;
+    }
     * { margin: 0; padding: 0; box-sizing: border-box; }
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--text-ghost); }
     html, body { height: 100%; overflow: hidden; }
     body {
       font-family: var(--font-sans);
@@ -142,6 +163,22 @@ export function renderLayout(title: string, content: LayoutContent): string {
       margin-left: 8px;
     }
     .top-bar .settings-link:hover { color: var(--text-muted); background: var(--surface); }
+    .top-bar .theme-toggle {
+      width: 28px;
+      height: 28px;
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-ghost);
+      background: none;
+      border: none;
+      font-size: 16px;
+      margin-left: 8px;
+      cursor: pointer;
+      font-family: var(--font-sans);
+    }
+    .top-bar .theme-toggle:hover { color: var(--text-muted); background: var(--surface); }
 
     /* Three-panel layout */
     .panels {
@@ -152,7 +189,7 @@ export function renderLayout(title: string, content: LayoutContent): string {
     .panel { overflow-y: auto; }
     .panel-index {
       width: 200px;
-      background: var(--surface);
+      background: var(--bg);
       border-right: 1px solid var(--border);
       flex-shrink: 0;
       padding: 12px 0;
@@ -197,7 +234,7 @@ export function renderLayout(title: string, content: LayoutContent): string {
 
     /* Index panel items */
     .index-section-label {
-      font-size: 10px;
+      font-size: 12px;
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.06em;
@@ -213,8 +250,8 @@ export function renderLayout(title: string, content: LayoutContent): string {
       display: block;
       color: inherit;
     }
-    .index-item:hover { background: rgba(0,0,0,0.03); }
-    .index-item.selected { background: var(--bg); }
+    .index-item:hover { background: rgba(128,128,128,0.08); }
+    .index-item.selected { background: var(--surface); }
     .index-item-title {
       font-size: 13px;
       color: var(--text-muted);
@@ -224,7 +261,7 @@ export function renderLayout(title: string, content: LayoutContent): string {
       color: var(--text);
     }
     .index-item-sub {
-      font-size: 11px;
+      font-size: 12px;
       color: var(--text-ghost);
       margin-top: 2px;
     }
@@ -243,7 +280,7 @@ export function renderLayout(title: string, content: LayoutContent): string {
     .entry-card:hover { background: var(--surface); }
     .entry-card.selected { background: var(--surface); }
     .entry-label {
-      font-size: 11px;
+      font-size: 12px;
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.05em;
@@ -253,15 +290,15 @@ export function renderLayout(title: string, content: LayoutContent): string {
     .entry-headline {
       font-size: 15px;
       font-weight: 600;
-      color: var(--text);
+      color: var(--headline-color);
       font-family: var(--font-serif);
       margin-bottom: 6px;
     }
     .entry-summary {
-      font-size: 13px;
+      font-size: 14px;
       color: var(--text-muted);
-      line-height: 1.5;
-      font-weight: 300;
+      line-height: 1.55;
+      font-weight: 400;
     }
     .entry-tags {
       display: flex;
@@ -270,20 +307,20 @@ export function renderLayout(title: string, content: LayoutContent): string {
       margin-top: 6px;
     }
     .entry-tag {
-      font-size: 10px;
-      padding: 1px 6px;
+      font-size: 13px;
+      padding: 2px 8px;
       background: var(--surface);
       border-radius: 3px;
       color: var(--text-faint);
     }
     .entry-card.selected .entry-tag { background: var(--border); }
     .entry-stats {
-      font-size: 11px;
+      font-size: 12px;
       color: var(--text-ghost);
       margin-top: 6px;
     }
     .entry-questions-label {
-      font-size: 10px;
+      font-size: 12px;
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.05em;
@@ -304,7 +341,7 @@ export function renderLayout(title: string, content: LayoutContent): string {
 
     /* Conversation transcript */
     .conversation-nav {
-      font-size: 11px;
+      font-size: 12px;
       color: var(--text-ghost);
       margin-bottom: 16px;
       padding-bottom: 12px;
@@ -319,32 +356,127 @@ export function renderLayout(title: string, content: LayoutContent): string {
       padding-left: 88px;
       position: relative;
     }
-    .msg { margin-bottom: 10px; position: relative; }
-    .msg-speaker-change { margin-top: 10px; border-top: 1px solid var(--border-subtle); }
+    .msg { margin-bottom: 6px; position: relative; padding: 8px 10px; border-radius: 6px; }
+    .msg-user { background: var(--surface); }
+    .msg-claude { background: rgba(128,128,128,0.04); }
+    .msg-speaker-change { margin-top: 14px; border-top: 1px solid var(--border-subtle); padding-top: 10px; }
     .msg-label {
       position: absolute;
       left: -84px;
-      top: 0;
+      top: 8px;
       width: 72px;
       text-align: right;
       font-weight: 700;
       font-size: 14px;
       color: var(--text);
     }
+    .msg-system { display: none; opacity: 0.5; font-style: italic; }
+    .msg-system .msg-label { color: var(--text-ghost) !important; }
+    .msg-raw { display: none; }
+    .transcript-raw .msg-system { display: block; }
+    .transcript-raw .msg-clean { display: none; }
+    .transcript-raw .msg-raw { display: block; }
+    .transcript-controls { display: none; }
+    .top-bar .raw-toggle {
+      width: 28px;
+      height: 28px;
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-ghost);
+      background: none;
+      border: none;
+      font-size: 18px;
+      margin-left: 8px;
+      cursor: pointer;
+      font-family: var(--font-sans);
+    }
+    .top-bar .raw-toggle:hover { color: var(--text-muted); background: var(--surface); }
+    .top-bar .raw-toggle.active { color: var(--text); background: var(--surface); }
+    .top-bar .fullscreen-toggle {
+      width: 28px;
+      height: 28px;
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-ghost);
+      background: none;
+      border: none;
+      font-size: 18px;
+      margin-left: 8px;
+      cursor: pointer;
+      font-family: var(--font-sans);
+    }
+    .top-bar .fullscreen-toggle:hover { color: var(--text-muted); background: var(--surface); }
+    .top-bar .fullscreen-toggle.active { color: var(--text); background: var(--surface); }
+    .top-bar .expand-all-toggle {
+      width: 28px;
+      height: 28px;
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-ghost);
+      background: none;
+      border: none;
+      font-size: 18px;
+      margin-left: 8px;
+      cursor: pointer;
+      font-family: var(--font-sans);
+    }
+    .top-bar .expand-all-toggle:hover { color: var(--text-muted); background: var(--surface); }
+    .top-bar .expand-all-toggle.active { color: var(--text); background: var(--surface); }
+    .panels-fullscreen .panel-index,
+    .panels-fullscreen .panel-entries { display: none; }
+    .panels-fullscreen .panel-detail { flex: 1; }
+    .msg-collapsible.msg-collapsed {
+      max-height: 12em;
+      overflow: hidden;
+      position: relative;
+    }
+    .msg-collapsible.msg-collapsed::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 2em;
+      background: linear-gradient(transparent, var(--bg));
+    }
+    .msg-claude .msg-collapsible.msg-collapsed::after {
+      background: linear-gradient(transparent, var(--bg));
+    }
+    .msg-user .msg-collapsible.msg-collapsed::after {
+      background: linear-gradient(transparent, var(--surface));
+    }
+    .msg-expand {
+      font-size: 12px;
+      color: var(--text-ghost);
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 2px 0;
+      font-family: var(--font-sans);
+    }
+    .msg-expand:hover { color: var(--text-muted); }
+    .msg-user .msg-label { color: var(--text); }
+    .msg-claude .msg-label { color: var(--text-faint); }
     .msg-body-user {
-      color: var(--text-secondary);
+      color: var(--msg-user-color);
       line-height: 1.6;
       font-size: 14px;
-      font-weight: 500;
+      font-weight: 400;
     }
     .msg-body-claude {
-      color: var(--text-muted);
+      color: var(--msg-claude-color);
       line-height: 1.55;
-      font-size: 14px;
-      font-weight: 300;
+      font-size: 15px;
+      font-weight: 400;
     }
     .msg-time {
-      font-size: 11px;
+      font-size: 12px;
       color: var(--text-ghost);
       margin-left: 6px;
       font-weight: 400;
@@ -371,7 +503,7 @@ export function renderLayout(title: string, content: LayoutContent): string {
       user-select: all;
     }
     .copy-btn {
-      font-size: 11px;
+      font-size: 12px;
       padding: 2px 8px;
       background: var(--surface);
       border: 1px solid var(--border);
@@ -384,7 +516,7 @@ export function renderLayout(title: string, content: LayoutContent): string {
       border-color: var(--text-ghost);
     }
     .session-footer-source {
-      font-size: 11px;
+      font-size: 12px;
       color: var(--text-ghost);
     }
 
@@ -478,7 +610,7 @@ export function renderLayout(title: string, content: LayoutContent): string {
     }
     .remote-source-field { display: flex; flex-direction: column; gap: 4px; }
     .remote-source-field-label {
-      font-size: 11px;
+      font-size: 12px;
       font-weight: 600;
       color: var(--text-faint);
     }
@@ -498,7 +630,7 @@ export function renderLayout(title: string, content: LayoutContent): string {
     }
     .connection-status { font-size: 12px; }
     .connection-ok { color: #16a34a; }
-    .connection-error { color: #b91c1c; font-size: 11px; }
+    .connection-error { color: #b91c1c; font-size: 12px; }
 
     /* Sync status */
     .sync-status-panel {
@@ -583,7 +715,7 @@ export function renderLayout(title: string, content: LayoutContent): string {
     .calendar-mode-toggle { display: flex; gap: 0; }
     .calendar-mode-toggle a {
       padding: 3px 10px;
-      font-size: 11px;
+      font-size: 12px;
       border: 1px solid var(--border);
       color: var(--text-faint);
       text-decoration: none;
@@ -607,7 +739,7 @@ export function renderLayout(title: string, content: LayoutContent): string {
       min-width: 100%;
     }
     .gantt-header {
-      font-size: 10px;
+      font-size: 12px;
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.04em;
@@ -714,10 +846,104 @@ export function renderLayout(title: string, content: LayoutContent): string {
     <form action="/search" method="get" style="display:flex;">
       <input class="search-field" type="text" name="q" placeholder="Search...">
     </form>
+    <button class="theme-toggle" onclick="cycleTheme()" title="Toggle theme"></button>
+    <button class="raw-toggle" onclick="toggleRaw()" title="Toggle raw transcript (Alt+R)">&lt;/&gt;</button>
+    <button class="fullscreen-toggle" onclick="toggleFullscreen()" title="Fullscreen transcript (Alt+F)">&#x26F6;</button>
+    <button class="expand-all-toggle" onclick="toggleExpandAll()" title="Expand/Collapse all (Alt+E)">&#x2195;</button>
     <a href="/settings" class="settings-link" title="Settings">&#9881;</a>
   </div>
   ${bodyHtml}
-  <script>document.querySelector('.entry-card.selected')?.scrollIntoView({block:'center'})</script>
+  <script>
+  document.querySelector('.entry-card.selected')?.scrollIntoView({block:'center'});
+  document.querySelectorAll('.index-item').forEach(function(item) {
+    item.addEventListener('click', function() {
+      document.querySelectorAll('.index-item.selected').forEach(function(el) {
+        el.classList.remove('selected');
+      });
+      item.classList.add('selected');
+    });
+  });
+  </script>
+  <script>
+  (function() {
+    var themes = ['light', 'cursor'];
+    var labels = { light: '\u2600', cursor: '\u263D' };
+    function applyTheme(t) {
+      if (t === 'light') document.documentElement.removeAttribute('data-theme');
+      else document.documentElement.setAttribute('data-theme', t);
+      localStorage.setItem('notebook-theme', t);
+      var btn = document.querySelector('.theme-toggle');
+      if (btn) btn.textContent = labels[t];
+    }
+    window.cycleTheme = function() {
+      var current = localStorage.getItem('notebook-theme') || 'light';
+      var next = themes[(themes.indexOf(current) + 1) % themes.length];
+      applyTheme(next);
+    };
+    applyTheme(localStorage.getItem('notebook-theme') || 'light');
+  })();
+  document.addEventListener('keydown', function(e) {
+    if (e.altKey && (e.key === 'r' || e.key === 'R')) {
+      e.preventDefault();
+      window.toggleRaw();
+    }
+    if (e.altKey && (e.key === 'f' || e.key === 'F')) {
+      e.preventDefault();
+      window.toggleFullscreen();
+    }
+    if (e.altKey && (e.key === 'e' || e.key === 'E')) {
+      e.preventDefault();
+      window.toggleExpandAll();
+    }
+  });
+  window.toggleMsg = function(btn) {
+    if (!btn) return;
+    var body = btn.previousElementSibling;
+    var collapsed = body.classList.toggle('msg-collapsed');
+    btn.textContent = collapsed ? 'Show more' : 'Show less';
+    if (!collapsed) return;
+    btn.closest('.msg').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  };
+  document.addEventListener('dblclick', function(e) {
+    var msg = e.target.closest('.msg');
+    if (!msg) return;
+    var btn = msg.querySelector('.msg-expand');
+    if (btn) {
+      e.preventDefault();
+      window.getSelection().removeAllRanges();
+      window.toggleMsg(btn);
+    }
+  });
+  window.toggleExpandAll = function() {
+    var collapsed = document.querySelectorAll('.msg-collapsible.msg-collapsed');
+    var btn = document.querySelector('.expand-all-toggle');
+    if (collapsed.length > 0) {
+      collapsed.forEach(function(el) { el.classList.remove('msg-collapsed'); });
+      document.querySelectorAll('.msg-expand').forEach(function(b) { b.textContent = 'Show less'; });
+      if (btn) btn.classList.add('active');
+    } else {
+      document.querySelectorAll('.msg-collapsible').forEach(function(el) { el.classList.add('msg-collapsed'); });
+      document.querySelectorAll('.msg-expand').forEach(function(b) { b.textContent = 'Show more'; });
+      if (btn) btn.classList.remove('active');
+    }
+  };
+  window.toggleFullscreen = function() {
+    var panels = document.querySelector('.panels');
+    var btn = document.querySelector('.fullscreen-toggle');
+    if (!panels) return;
+    var isFull = panels.classList.toggle('panels-fullscreen');
+    if (btn) btn.classList.toggle('active', isFull);
+  };
+  window.toggleRaw = function() {
+    var detail = document.getElementById('panel-detail') || document.body;
+    var btn = document.querySelector('.raw-toggle');
+    var isRaw = detail.classList.toggle('transcript-raw');
+    if (btn) {
+      btn.textContent = isRaw ? '</>' : '</>';
+      btn.classList.toggle('active', isRaw);
+    }
+  };
+  </script>
 </body>
 </html>`;
 }

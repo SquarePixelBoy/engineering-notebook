@@ -30,9 +30,9 @@ describe("renderConversation", () => {
       "**Claude (2026-02-21 17:38):** Second message",
     ].join("\n");
     const html = renderConversation(md);
-    // Should only have one "Claude" label, not two
+    // Should have one "Claude" label per view (clean + raw = 2)
     const labelMatches = html.match(/msg-label/g);
-    expect(labelMatches?.length).toBe(1);
+    expect(labelMatches?.length).toBe(2);
     // Both messages should be in the body
     expect(html).toContain("First message");
     expect(html).toContain("Second message");
